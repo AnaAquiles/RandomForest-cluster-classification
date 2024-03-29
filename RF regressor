@@ -1,0 +1,40 @@
+from sklearn.model_selection import train_test_split
+
+ClassFeat = pd.get_dummies(ClassMATv)
+labels = np.array(ClassFeat['Area'])                                           # Choose the variable to train
+
+ClassFeat = ClassFeat.drop('Area', axis = 1)
+ClassFeat_list = list(ClassFeat.columns)
+
+ClassFeatArr = np.array(ClassFeat)
+
+train_features, test_features, train_labels, test_labels = train_test_split(ClassFeatArr, 
+                                                                            labels,
+                                                                            test_size = 0.25, 
+                                                                            random_state = 42)
+## baseline predicts
+baseline_preds = test_features[:, ClassFeat_list.index('Size')]
+baseline_errors = abs(baseline_preds - test_labels)
+
+print('Average baseline error: ', round(np.mean(baseline_errors), 2))
+
+from sklearn.ensemble import RandomForestRegressor                               # Instantiate model with 1000 decision trees
+
+rf = RandomForestRegressor(n_estimators = 1000, max_depth= 3 ,random_state = 42)  # Train the model on training data
+rf.fit(train_features, train_labels)
+
+predictions = rf.predict(test_features)# Calculate the absolute errors
+errors = abs(predictions - test_labels)
+
+print('Mean Absolute Error:', round(np.mean(errors), 2), 'Size.')
+
+from sklearn.tree import export_graphviz
+import pydot                                                                    # Pull out one tree from the forest
+
+tree = rf.estimators_[5]                                                         # Export the image to a dot file
+export_graphviz(tree, out_file = 'tree.dot', feature_names = ClassFeat_list, rounded = True, precision = 1)# Use dot file to create a graph
+(graph, ) = pydot.graph_from_dot_file('tree.dot')                               # Write graph to a png file
+graph.write_png('tree.png')
+
+importances = list(rf.feature_importances_)
+feature_importances = [(feature, round(importance, 2)) for feature, importance in zip(ClassFeat_list, importances)]
